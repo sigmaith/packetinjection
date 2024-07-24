@@ -16,6 +16,7 @@ MODBUS_WRITE_DATAS = "wds"
 MODBUS_REGISTER_DATA = "rd"
 MODBUS_REGISTER_DATAS = "rds"
 MODBUS_EXCEPTION_CODE = "ec"
+MODBUS_BIT_COUNT = "wc"
 MODBUS_WORD_COUNT = "wc"
 
 # Interval 
@@ -70,6 +71,13 @@ def parse_input_file(file_path):
                         value = range(start, end + 1)
                     else:
                         value = int(value, 16)
+                if key == MODBUS_BIT_COUNT: 
+                    if "random" in value:
+                        range_part = value[value.find('(')+1:value.find(")")]
+                        start, end = map(lambda x: int(x,10), range_part.split(':'))
+                        value = range(start, end + 1)
+                    else:
+                        value = int(value, 10)
                 if key == MODBUS_WORD_COUNT: 
                     if "random" in value:
                         range_part = value[value.find('(')+1:value.find(")")]
@@ -111,19 +119,19 @@ def read_coils(client, packet): # func1
 def read_discrete_inputs(client, packet): # func2
     try:
         reference_numbers = packet.get(MODBUS_REFERENCE_NUMBER)
-        word_count = packet.get(MODBUS_WORD_COUNT)
+        bit_count = packet.get(MODBUS_WORD_COUNT)
 
         if not isinstance(reference_numbers, range):
             reference_numbers = [reference_numbers]
 
-        if reference_numbers is not None and word_count is not None:
+        if reference_numbers is not None and bit_count is not None:
             for reference_number in reference_numbers:
-                if isinstance(word_count, range):
-                    actual_word_count = random.choice(list(word_count))
+                if isinstance(bit_count, range):
+                    actual_bit_count = random.choice(list(bit_count))
                 else:
-                    actual_word_count = word_count
+                    actual_bit_count = bit_count
 
-                response = client.read_discrete_inputs(reference_number, actual_word_count)
+                response = client.read_discrete_inputs(reference_number, actual_bit_count)
                 if response.isError():
                     error_code = response.exception_code
                     error_message = error_descriptions.get(error_code, "알 수 없는 오류")
@@ -214,7 +222,7 @@ def main(argv):
         function_code = packet.get(MODBUS_FUNCTION_CODE)
         if function_code == 1:
             read_coils(client, packet)
-        if function_code == 2:
+        elif function_code == 2:
             read_discrete_inputs(client, packet)
         elif function_code == 5:
             write_single_coil(client, packet)
