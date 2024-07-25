@@ -1,0 +1,5 @@
+# PythonScript: func5.py
+# Scenario: fanOn
+# Description : Turn on each fan
+S1 
+{fc=5, rn=161, wd=0x00}

@@ -3,5 +3,3 @@
 # Description : Turn on each fan
 S1 
 {fc=5, rn=160, wd=0xFF}
-S2
-{fc=5, rn=161, wd=0xFF}

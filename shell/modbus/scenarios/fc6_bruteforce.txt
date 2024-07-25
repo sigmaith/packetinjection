@@ -1,0 +1,2 @@
+S1 
+{fc=6, rn=0:65535, rd=random(0x00:0xffff)}
