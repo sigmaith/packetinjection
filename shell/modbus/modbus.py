@@ -18,7 +18,7 @@ MODBUS_WRITE_DATAS = "wds"
 MODBUS_REGISTER_DATA = "rd"
 MODBUS_REGISTER_DATAS = "rds"
 MODBUS_EXCEPTION_CODE = "ec"
-MODBUS_BIT_COUNT = "wc"
+MODBUS_BIT_COUNT = "bc"
 MODBUS_WORD_COUNT = "wc"
 
 # Interval 
@@ -69,7 +69,7 @@ def parse_input_file(file_path):
                 if key == MODBUS_COUNT: value = int(value)
                 if key == MODBUS_WRITE_DATAS:
                     if 'random' in value:
-                        count = packet[MODBUS_BIT_COUNT]
+                        count = packet[MODBUS_COUNT]
                         value = [random.choice([0x00, 0xFF]) for _ in range(count)]  
                     else:
                         value = [int(x.strip(), 16) for x in value.strip('[]').split(',')]
@@ -89,40 +89,22 @@ def parse_input_file(file_path):
                         value = [random.randint(start, end) for _ in range(count)]
                     else:
                         value = [int(x.strip(), 16) for x in value.strip('[]').split(',')]
-                if key == MODBUS_BIT_COUNT: 
-                    if "random" in value:
-                        range_part = value[value.find('(')+1:value.find(")")]
-                        start, end = map(lambda x: int(x,10), range_part.split(':'))
-                        value = range(start, end + 1)
-                    else:
-                        value = int(value, 10)
-                if key == MODBUS_WORD_COUNT: 
-                    if "random" in value:
-                        range_part = value[value.find('(')+1:value.find(")")]
-                        start, end = map(lambda x: int(x,10), range_part.split(':'))
-                        value = range(start, end + 1)
-                    else:
-                        value = int(value, 10)
-                packet[key.strip()] = value
+                if key == MODBUS_BIT_COUNT: value = int(value, 16)
+                if key == MODBUS_WORD_COUNT: value = int(value, 16)
             packets.append(packet)
     return packets
 
 def read_coils(client, packet): # func1
     try:
         reference_numbers = packet.get(MODBUS_REFERENCE_NUMBER)
-        word_count = packet.get(MODBUS_WORD_COUNT)
+        bit_count = packet.get(MODBUS_BIT_COUNT)
 
         if not isinstance(reference_numbers, range):
             reference_numbers = [reference_numbers]
 
-        if reference_numbers is not None and word_count is not None:
+        if reference_numbers is not None and bit_count is not None:
             for reference_number in reference_numbers:
-                if isinstance(word_count, range):
-                    actual_word_count = random.choice(list(word_count))
-                else:
-                    actual_word_count = word_count
-
-                response = client.read_coils(reference_number, actual_word_count)
+                response = client.read_coils(reference_number, bit_count)
                 if response.isError():
                     error_code = response.exception_code
                     error_message = error_descriptions.get(error_code, "알 수 없는 오류")
@@ -137,19 +119,36 @@ def read_coils(client, packet): # func1
 def read_discrete_inputs(client, packet): # func2
     try:
         reference_numbers = packet.get(MODBUS_REFERENCE_NUMBER)
-        bit_count = packet.get(MODBUS_WORD_COUNT)
+        bit_count = packet.get(MODBUS_BIT_COUNT)
 
         if not isinstance(reference_numbers, range):
             reference_numbers = [reference_numbers]
 
         if reference_numbers is not None and bit_count is not None:
             for reference_number in reference_numbers:
-                if isinstance(bit_count, range):
-                    actual_bit_count = random.choice(list(bit_count))
+                response = client.read_discrete_inputs(reference_number, bit_count)
+                if response.isError():
+                    error_code = response.exception_code
+                    error_message = error_descriptions.get(error_code, "알 수 없는 오류")
+                    print(f"Error code: {error_code}, Error occurred: {error_message} at reference {reference_number}")
                 else:
-                    actual_bit_count = bit_count
+                    # 정상적인 응답 처리
+                    print(f"Response data: {response} at reference {reference_number}")
 
-                response = client.read_discrete_inputs(reference_number, actual_bit_count)
+    except Exception as e:
+        print(f"Modbus communication error: {e}")
+
+def read_holding_registers(client, packet): # func3
+    try:
+        reference_numbers = packet.get(MODBUS_REFERENCE_NUMBER)
+        word_count = packet.get(MODBUS_WORD_COUNT)
+
+        if not isinstance(reference_numbers, range):
+            reference_numbers = [reference_numbers]
+
+        if reference_numbers is not None and word_count is not None:
+            for reference_number in reference_numbers:
+                response = client.read_holding_registers(reference_number, word_count)
                 if response.isError():
                     error_code = response.exception_code
                     error_message = error_descriptions.get(error_code, "알 수 없는 오류")
@@ -161,6 +160,27 @@ def read_discrete_inputs(client, packet): # func2
     except Exception as e:
         print(f"Modbus communication error: {e}")
     
+def read_holding_registers(client, packet): # func4
+    try:
+        reference_numbers = packet.get(MODBUS_REFERENCE_NUMBER)
+        word_count = packet.get(MODBUS_WORD_COUNT)
+
+        if not isinstance(reference_numbers, range):
+            reference_numbers = [reference_numbers]
+
+        if reference_numbers is not None and word_count is not None:
+            for reference_number in reference_numbers:
+                response = client.read_holding_registers(reference_number, word_count)
+                if response.isError():
+                    error_code = response.exception_code
+                    error_message = error_descriptions.get(error_code, "알 수 없는 오류")
+                    print(f"Error code: {error_code}, Error occurred: {error_message} at reference {reference_number}")
+                else:
+                    # 정상적인 응답 처리
+                    print(f"Response data: {response} at reference {reference_number}")
+
+    except Exception as e:
+        print(f"Modbus communication error: {e}")
 
 def write_single_coil(client, packet): # func5
     try:
