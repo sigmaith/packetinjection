@@ -51,14 +51,16 @@ def parse_input_file(file_path):
                 key, value = part.split("=")
                 value = value.strip()
                 if key == INTERVAL: value = int(value)
-                if key == MODBUS_FUNCTION_CODE: value = int(value)
-                if key == MODBUS_REFERENCE_NUMBER: 
+                elif key == MODBUS_BIT_COUNT: value = int(value, 16)
+                elif key == MODBUS_WORD_COUNT: value = int(value, 16)
+                elif key == MODBUS_FUNCTION_CODE: value = int(value)
+                elif key == MODBUS_REFERENCE_NUMBER: 
                     if ':' in value:
                         start, end = map(int, value.split(':'))
                         value = range(start, end+1)
                     else:
                         value = int(value)
-                if key == MODBUS_WRITE_DATA: 
+                elif key == MODBUS_WRITE_DATA: 
                     # Assuming input for wd is always "random" for function code 5
                     # and only allows 0x00 or 0xFF
                     if "random" in value:
@@ -66,22 +68,22 @@ def parse_input_file(file_path):
                         value = [int(option.strip(), 16) for option in options]
                     else:
                         value = int(value, 16)
-                if key == MODBUS_COUNT: value = int(value)
-                if key == MODBUS_WRITE_DATAS:
+                elif key == MODBUS_COUNT: value = int(value)
+                elif key == MODBUS_WRITE_DATAS:
                     if 'random' in value:
                         count = packet[MODBUS_COUNT]
                         value = [random.choice([0x00, 0xFF]) for _ in range(count)]  
                     else:
                         value = [int(x.strip(), 16) for x in value.strip('[]').split(',')]
 
-                if key == MODBUS_REGISTER_DATA: 
+                elif key == MODBUS_REGISTER_DATA: 
                     if "random" in value:
                         range_part = value[value.find('(')+1:value.find(")")]
                         start, end = map(lambda x: int(x,16), range_part.split(':'))
                         value = range(start, end + 1)
                     else:
                         value = int(value, 16)
-                if key == MODBUS_REGISTER_DATAS:
+                elif key == MODBUS_REGISTER_DATAS:
                     if 'random' in value:
                         range_part = value[value.find('(')+1:value.find(')')]
                         start, end = map(lambda x: int(x, 16), range_part.split(':'))
@@ -89,8 +91,8 @@ def parse_input_file(file_path):
                         value = [random.randint(start, end) for _ in range(count)]
                     else:
                         value = [int(x.strip(), 16) for x in value.strip('[]').split(',')]
-                if key == MODBUS_BIT_COUNT: value = int(value, 16)
-                if key == MODBUS_WORD_COUNT: value = int(value, 16)
+                
+                packet[key.strip()] = value
             packets.append(packet)
     return packets
 
