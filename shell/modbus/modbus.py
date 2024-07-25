@@ -81,6 +81,14 @@ def parse_input_file(file_path):
                         value = range(start, end + 1)
                     else:
                         value = int(value, 16)
+                if key == MODBUS_REGISTER_DATAS:
+                    if 'random' in value:
+                        range_part = value[value.find('(')+1:value.find(')')]
+                        start, end = map(lambda x: int(x, 16), range_part.split(':'))
+                        count = int(packet[MODBUS_COUNT])
+                        value = [random.randint(start, end) for _ in range(count)]
+                    else:
+                        value = [int(x.strip(), 16) for x in value.strip('[]').split(',')]
                 if key == MODBUS_BIT_COUNT: 
                     if "random" in value:
                         range_part = value[value.find('(')+1:value.find(")")]
@@ -225,6 +233,24 @@ def write_multiple_coils(client, packet): # func15
     except Exception as e:
         print(f"Modbus communication error: {e}")
 
+def write_multiple_registers(client, packet): # func16
+    try:
+        reference_number = packet.get(MODBUS_REFERENCE_NUMBER)
+        values = packet.get(MODBUS_REGISTER_DATAS)  # MODBUS_WRITE_DATAS 는 값 리스트
+
+        if reference_number is not None and values is not None:
+            response = client.write_registers(reference_number, values)
+            if response.isError():
+                print(f"Error writing multiple registers at {reference_number}: {response}")
+            else:
+                print(f"Successfully wrote multiple registers starting at {reference_number} with values {values}")
+        else:
+            print("Error: Reference number or values missing.")
+    except Exception as e:
+        # 예외 발생 시 예외 정보 출력
+        print(f"Exception during write multiple registers: {str(e)}")
+
+
 def main(argv):
     if len(argv) < 2:
         print("Usage: python script.py <path_to_file>")
@@ -259,6 +285,8 @@ def main(argv):
             write_single_register(client, packet)
         elif function_code == 15:
             write_multiple_coils(client, packet)
+        elif function_code == 16:
+            write_multiple_registers(client, packet)
 
     client.close()  # 클라이언트 연결 종료
 
