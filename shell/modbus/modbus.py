@@ -11,7 +11,9 @@ MODBUS_UNIT_ID = "ui"
 MODBUS_FUNCTION_CODE = "fc"
 MODBUS_REFERENCE_NUMBER = "rn"
 
+
 MODBUS_WRITE_DATA = "wd"
+MODBUS_COUNT = "c"
 MODBUS_WRITE_DATAS = "wds"
 MODBUS_REGISTER_DATA = "rd"
 MODBUS_REGISTER_DATAS = "rds"
@@ -64,6 +66,14 @@ def parse_input_file(file_path):
                         value = [int(option.strip(), 16) for option in options]
                     else:
                         value = int(value, 16)
+                if key == MODBUS_COUNT: value = int(value)
+                if key == MODBUS_WRITE_DATAS:
+                    if 'random' in value:
+                        count = packet[MODBUS_BIT_COUNT]
+                        value = [random.choice([0x00, 0xFF]) for _ in range(count)]  
+                    else:
+                        value = [int(x.strip(), 16) for x in value.strip('[]').split(',')]
+
                 if key == MODBUS_REGISTER_DATA: 
                     if "random" in value:
                         range_part = value[value.find('(')+1:value.find(")")]
@@ -196,6 +206,25 @@ def write_single_register(client, packet): # func6
     except Exception as e:
         print(f"Modbus communication error: {e}")
 
+def write_multiple_coils(client, packet): # func15
+    try:
+        reference_number = packet.get(MODBUS_REFERENCE_NUMBER)
+        values = packet.get(MODBUS_WRITE_DATAS)
+
+        if reference_number is not None and values is not None:
+            # Modbus TCP 클라이언트를 사용하여 여러 코일에 값을 쓰기
+            response = client.write_coils(reference_number, values)
+            if response.isError():
+                # 에러 처리
+                print(f"Error writing coils at {reference_number}: {response}")
+            else:
+                # 성공 메시지 출력
+                print(f"Successfully wrote coils starting at {reference_number} with values {values}")
+        else:
+            print("Error: Reference number or values missing")
+    except Exception as e:
+        print(f"Modbus communication error: {e}")
+
 def main(argv):
     if len(argv) < 2:
         print("Usage: python script.py <path_to_file>")
@@ -228,6 +257,8 @@ def main(argv):
             write_single_coil(client, packet)
         elif function_code == 6:
             write_single_register(client, packet)
+        elif function_code == 15:
+            write_multiple_coils(client, packet)
 
     client.close()  # 클라이언트 연결 종료
 
